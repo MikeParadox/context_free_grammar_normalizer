@@ -25,7 +25,7 @@ int main()
                               {'B', {"BC", "AB"}},
                               {'C', {"aB", "@"}}}};
 
-   print_grammar(grammar2.get_grammar());
+   print_grammar(grammar.get_normalized_grammar());
    println();
    auto g{grammar2.get_normalized_grammar()};
    print_grammar(g);

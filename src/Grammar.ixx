@@ -9,10 +9,6 @@ module;
 #include <unordered_map>
 #include <vector>
 
-#if __has_include(<ordered_map.h>)
-#include <ordered_map.h>
-#endif
-
 export module Grammar_utils;
 
 export namespace Grammar_utils
@@ -29,7 +25,6 @@ using grammar_t = std::unordered_map<char, vector<string>>;
 
 class Grammar
 {
-
  public:
    /**
     * @brief Class to represent CFG ('@' represents epsilon)
@@ -99,6 +94,8 @@ auto Grammar::get_normalized_grammar() -> grammar_t
    return _normalized_grammar;
 }
 
+// warts and all
+// TODO rewrite to lower cognitive complexity to <25
 void Grammar::remove_non_productive()
 {
    set<char> f{};
