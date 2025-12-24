@@ -43,7 +43,7 @@ class Grammar
    static constexpr char eps{'@'};
 
    void remove_non_productive();
-   void remove_unaccessible();
+   void remove_inaccessible();
    void remove_epsilon();
    void remove_chained();
 
@@ -64,13 +64,13 @@ auto Grammar::get_grammar() const -> grammar_t
 void Grammar::normalize()
 {
    _normalized_grammar = _grammar;
-   remove_non_productive();
+   // remove_non_productive();
    // todo implement and uncomment
-   // remove_unaccessible();
+   remove_inaccessible();
    // remove_epsilon();
    // remove_chained();
    // remove_non_productive();
-   // remove_unaccessible();
+   // remove_inaccessible();
    _is_grammar_normilized = true;
 }
 
@@ -165,6 +165,52 @@ void Grammar::remove_non_productive()
             if (is_in_f)
                result[prod->first].push_back(x);
          }
+      }
+   }
+
+   _normalized_grammar = std::move(result);
+}
+
+void Grammar::remove_inaccessible()
+{
+   set<char> reachable{'S'};
+   queue<char> q{};
+   q.push('S');
+
+   while (!q.empty())
+   {
+      auto a{q.front()};
+      q.pop();
+      for (auto x : _normalized_grammar[a])
+      {
+         for (char ch : x)
+         {
+            if (!is_terminal(ch) && !reachable.contains(ch))
+            {
+               reachable.insert(ch);
+               q.push(ch);
+            }
+         }
+      }
+   }
+
+   grammar_t result{};
+
+   auto is_all_nonterms_reachable{
+     [&reachable, this](const string& s) -> bool
+     {
+        return std::ranges::all_of(
+          s.begin(), s.end(), [&reachable, this](char ch) -> bool
+          { return is_terminal(ch) || reachable.contains(ch); });
+     }};
+
+
+   for (auto nonterm : reachable)
+   {
+      for (auto s : _normalized_grammar[nonterm])
+      {
+         if (is_all_nonterms_reachable(s))
+            result[nonterm].push_back(s);
       }
    }
 
