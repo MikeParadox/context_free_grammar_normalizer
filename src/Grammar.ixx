@@ -1,89 +1,187 @@
 module;
 
+#include <algorithm>
 #include <initializer_list>
-#include <map>
 #include <print>
+#include <queue>
+#include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 export module Grammar_utils;
 
-namespace Grammar_utils
+export namespace Grammar_utils
 {
 using std::print;
+using std::println;
+using std::queue;
+using std::set;
 using std::string;
 using std::vector;
 
-/**
- * Class to represent context free grammar. Capital letters represent
- * non-terminal symbols, while small letters and digits represents terminal
- * symbols
- */
+
+using grammar_t = std::unordered_map<char, vector<string>>;
+
 class Grammar
 {
-   using grammar_t = std::map<char, vector<string>>;
-
  public:
    /**
-    *
+    * @brief Class to represent CFG ('@' represents epsilon)
     * @param grammar List of production rules
     */
-   Grammar(
-     const std::initializer_list<std::pair<char, vector<string>>>& grammar)
-   {
-      for (const auto& production : grammar)
-         _grammar[production.first] = production.second;
-   }
+   Grammar(grammar_t grammar) : _grammar{std::move(grammar)} {}
 
-   [[nodiscard]] grammar_t get_grammar() const;
-
-   [[nodiscard]] grammar_t get_normilized_grammar() const;
-
-
+   [[nodiscard]] auto get_grammar() const -> grammar_t;
+   [[nodiscard]] auto get_normalized_grammar() -> grammar_t;
 
  private:
    grammar_t _grammar;
-   mutable grammar_t _normalized_grammar;
-   mutable bool _is_grammar_normilized{false};
+   grammar_t _normalized_grammar;
+   bool _is_grammar_normilized{false};
 
-   void remove_non_productive() const;
-   void remove_unaccessible() const;
-   void remove_epsilon() const;
-   void remove_chained() const;
+   static constexpr char eps{'@'};
 
-   /**
+   void remove_non_productive();
+   void remove_unaccessible();
+   void remove_epsilon();
+   void remove_chained();
+
+   /***
     * @brief Normalizes class grammar.
     * @return Normalized grammar.
     */
-   void normalize() const;
+   void normalize();
+   [[nodiscard]] bool is_all_terminals(const string& str) const;
+   [[nodiscard]] bool is_terminal(char ch);
 };
 
-Grammar::grammar_t Grammar::get_grammar() const
+auto Grammar::get_grammar() const -> grammar_t
 {
    return _grammar;
 }
 
-void Grammar::normalize() const
+void Grammar::normalize()
 {
    _normalized_grammar = _grammar;
    remove_non_productive();
-   remove_unaccessible();
-   remove_epsilon();
-   remove_chained();
-   remove_non_productive();
-   remove_unaccessible();
+   // todo implement and uncomment
+   // remove_unaccessible();
+   // remove_epsilon();
+   // remove_chained();
+   // remove_non_productive();
+   // remove_unaccessible();
    _is_grammar_normilized = true;
 }
 
-Grammar::grammar_t Grammar::get_normilized_grammar() const
+bool Grammar::is_all_terminals(const string& str) const
 {
-   if (!_is_grammar_normilized) normalize();
+   return std::ranges::all_of(
+     str, [](const char ch) -> bool
+     { return islower(ch) || isdigit(ch) || ch == eps; });
+}
+
+bool Grammar::is_terminal(const char ch)
+{
+   return islower(ch) || isdigit(ch) || ch == '@';
+}
+
+auto Grammar::get_normalized_grammar() -> grammar_t
+{
+   if (!_is_grammar_normilized)
+      normalize();
 
    return _normalized_grammar;
 }
 
+// warts and all
+// TODO rewrite to lower cognitive complexity to <25
+void Grammar::remove_non_productive()
+{
+   set<char> f{};
+   queue<char> q{};
 
+   auto is_all_in_f{[&f](const string& s) -> bool
+                    {
+                       return std::ranges::all_of(s.begin(), s.end(),
+                                                  [&f](char ch) -> bool
+                                                  { return f.contains(ch); });
+                    }};
 
+   for (auto prod{_normalized_grammar.begin()};
+        prod != _normalized_grammar.end(); ++prod)
+   {
+      for (const auto& x : prod->second)
+      {
+         if (is_all_terminals(x))
+         {
+            f.insert(prod->first);
+            q.push(prod->first);
+            break;
+         }
+      }
+   }
+
+   while (!q.empty())
+   {
+      auto p = q.front();
+      q.pop();
+
+      for (auto prod{_normalized_grammar.begin()};
+           prod != _normalized_grammar.end(); ++prod)
+      {
+         if (auto [nonterm, symbols] = *prod; !f.contains(nonterm))
+         {
+            for (auto s : symbols)
+            {
+               if (is_all_in_f(s))
+               {
+                  f.insert(nonterm);
+                  q.push(nonterm);
+               }
+            }
+         }
+      }
+   }
+
+   grammar_t result;
+   for (auto prod{_normalized_grammar.begin()};
+        prod != _normalized_grammar.end(); ++prod)
+   {
+      auto [nonterm, symbols]{*prod};
+      if (f.contains(nonterm))
+      {
+         for (const auto& x : symbols)
+         {
+            bool is_in_f{true};
+            for (const char ch : x)
+            {
+               if (!is_terminal(ch) && !f.contains(ch))
+               {
+                  is_in_f = false;
+                  break;
+               }
+            }
+            if (is_in_f)
+               result[prod->first].push_back(x);
+         }
+      }
+   }
+
+   _normalized_grammar = std::move(result);
+}
+
+void print_grammar(const grammar_t& grammar)
+{
+   for (const auto& [fst, snd] : grammar)
+   {
+      print("{} -> ", fst);
+      for (const auto& x : snd)
+         print("{}|", x);
+
+      println();
+   }
+}
 
 
 
