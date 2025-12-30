@@ -40,7 +40,8 @@ class Grammar
    grammar_t _normalized_grammar;
    bool _is_grammar_normilized{false};
 
-   static constexpr char eps{'@'};
+   static constexpr string eps{"@"};
+   static constexpr char new_starting_symbol{'$'};
 
    void remove_non_productive();
    void remove_inaccessible();
@@ -67,7 +68,7 @@ void Grammar::normalize()
    // remove_non_productive();
    // todo implement and uncomment
    remove_inaccessible();
-   // remove_epsilon();
+   remove_epsilon();
    // remove_chained();
    // remove_non_productive();
    // remove_inaccessible();
@@ -78,7 +79,7 @@ bool Grammar::is_all_terminals(const string& str) const
 {
    return std::ranges::all_of(
      str, [](const char ch) -> bool
-     { return islower(ch) || isdigit(ch) || ch == eps; });
+     { return islower(ch) || isdigit(ch) || ch == eps[0]; });
 }
 
 bool Grammar::is_terminal(const char ch)
@@ -212,6 +213,123 @@ void Grammar::remove_inaccessible()
          if (is_all_nonterms_reachable(s))
             result[nonterm].push_back(s);
       }
+   }
+
+   _normalized_grammar = std::move(result);
+}
+
+void Grammar::remove_epsilon()
+{
+   std::set<char> nullable;
+   bool changed = true;
+
+   while (changed)
+   {
+      changed = false;
+
+      for (const auto& [A, rhss] : _normalized_grammar)
+      {
+         if (nullable.contains(A))
+            continue;
+
+         for (const auto& rhs : rhss)
+         {
+            if (rhs == eps)
+            {
+               nullable.insert(A);
+               changed = true;
+               break;
+            }
+
+            bool all_nullable = !rhs.empty();
+            for (char x : rhs)
+            {
+               if (is_terminal(x) || !nullable.contains(x))
+               {
+                  all_nullable = false;
+                  break;
+               }
+            }
+
+            if (all_nullable)
+            {
+               nullable.insert(A);
+               changed = true;
+               break;
+            }
+         }
+      }
+   }
+
+   if (nullable.contains('S'))
+   {
+      _normalized_grammar[new_starting_symbol].push_back(std::string(1, 'S'));
+   }
+
+   grammar_t result;
+
+   auto gen_variants = [&](const std::string& rhs)
+   {
+      std::set<std::string> variants;
+      std::string cur;
+
+      auto dfs = [&](auto&& self, std::size_t i) -> void
+      {
+         if (i == rhs.size())
+         {
+            variants.insert(cur);
+            return;
+         }
+
+         char x = rhs[i];
+
+         cur.push_back(x);
+         self(self, i + 1);
+         cur.pop_back();
+
+         if (!is_terminal(x) && nullable.contains(x))
+         {
+            self(self, i + 1);
+         }
+      };
+
+      dfs(dfs, 0);
+      return variants;
+   };
+
+   for (const auto& [A, rhss] : _normalized_grammar)
+   {
+      std::set<std::string> acc;
+
+      for (const auto& rhs : rhss)
+      {
+         if (rhs == eps)
+            continue;
+
+         for (const auto& v : gen_variants(rhs))
+         {
+            if (!v.empty())
+            {
+               acc.insert(v);
+            }
+         }
+      }
+
+      if (!acc.empty())
+      {
+         result[A] = std::vector<std::string>(acc.begin(), acc.end());
+      }
+   }
+
+   if (nullable.contains('S'))
+   {
+      result[new_starting_symbol].push_back(eps);
+   }
+
+   for (auto& [A, rhss] : result)
+   {
+      std::sort(rhss.begin(), rhss.end());
+      rhss.erase(std::unique(rhss.begin(), rhss.end()), rhss.end());
    }
 
    _normalized_grammar = std::move(result);

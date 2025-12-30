@@ -14,7 +14,7 @@ int main()
    // Grammar grammar{grammar_t{
    //   {'S', {"aB", "e"}}, {'A', {"bA", "C"}}, {'B', {"b"}}, {'C', {"A"}}}};
 
-   Grammar grammar{grammar_t{{'S', {"aT", "pU", "a", "A"}},
+   Grammar grammar{grammar_t{{'S', {"aT", "pU", "a", "A", "@"}},
                              {'T', {"xT", "ax"}},
                              {'U', {"pU", "TT", "AU"}},
                              {'A', {"Bx", "AA"}},
@@ -23,7 +23,7 @@ int main()
    Grammar grammar2{grammar_t{
      {'S', {"AB", "A"}}, {'A', {"a"}}, {'B', {"B", "AB"}}, {'C', {"aB", "@"}}}};
 
-   // print_grammar(grammar.get_normalized_grammar());
+   print_grammar(grammar.get_normalized_grammar());
    println();
    auto g{grammar2.get_normalized_grammar()};
    print_grammar(g);
