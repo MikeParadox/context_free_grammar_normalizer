@@ -11,23 +11,24 @@ int main()
    using std::println;
 
 
-   // Grammar grammar{grammar_t{
-   //   {'S', {"aB", "e"}}, {'A', {"bA", "C"}}, {'B', {"b"}}, {'C', {"A"}}}};
+   Grammar grammar1{grammar_t{
+     {'S', {"aB", "e"}}, {'A', {"bA", "C"}}, {'B', {"b"}}, {'C', {"A"}}}};
 
-   Grammar grammar{grammar_t{{'S', {"aT", "pU", "a", "A", "@"}},
-                             {'T', {"xT", "ax"}},
-                             {'U', {"pU", "TT", "AU"}},
-                             {'A', {"Bx", "AA"}},
-                             {'B', {"BB", "xA"}}}};
+   Grammar grammar2{grammar_t{{'S', {"aT", "pU", "a", "A", "@"}},
+                              {'T', {"xT", "ax"}},
+                              {'U', {"pU", "TT", "AU"}},
+                              {'A', {"Bx", "AA"}},
+                              {'B', {"BB", "xA"}}}};
 
-   Grammar grammar2{grammar_t{
+   Grammar grammar3{grammar_t{
      {'S', {"AB", "A"}}, {'A', {"a"}}, {'B', {"B", "AB"}}, {'C', {"aB", "@"}}}};
 
-   print_grammar(grammar.get_normalized_grammar());
+   print_grammar(grammar1.get_normalized_grammar());
    println();
-   auto g{grammar2.get_normalized_grammar()};
-   print_grammar(g);
-
+   print_grammar(grammar2.get_normalized_grammar());
+   println();
+   print_grammar(grammar3.get_normalized_grammar());
+   println();
 
    return 0;
 }
