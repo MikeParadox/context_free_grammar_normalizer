@@ -65,13 +65,12 @@ auto Grammar::get_grammar() const -> grammar_t
 void Grammar::normalize()
 {
    _normalized_grammar = _grammar;
-   // remove_non_productive();
-   // todo implement and uncomment
+   remove_non_productive();
    remove_inaccessible();
    remove_epsilon();
-   // remove_chained();
-   // remove_non_productive();
-   // remove_inaccessible();
+   remove_chained();
+   remove_non_productive();
+   remove_inaccessible();
    _is_grammar_normilized = true;
 }
 
@@ -330,6 +329,72 @@ void Grammar::remove_epsilon()
    {
       std::sort(rhss.begin(), rhss.end());
       rhss.erase(std::unique(rhss.begin(), rhss.end()), rhss.end());
+   }
+
+   _normalized_grammar = std::move(result);
+}
+
+void Grammar::remove_chained()
+{
+   auto is_unit_rhs = [&](const string& rhs) -> bool
+   {
+      return rhs.size() == 1 && !is_terminal(rhs[0]); // A -> B
+   };
+
+   std::set<char> nonterms;
+   for (const auto& [a, _] : _normalized_grammar)
+      nonterms.insert(a);
+
+   grammar_t result;
+
+   for (char a : nonterms)
+   {
+      std::set<char> closure;
+      std::queue<char> q;
+
+      closure.insert(a);
+      q.push(a);
+
+      while (!q.empty())
+      {
+         char x = q.front();
+         q.pop();
+
+         auto it = _normalized_grammar.find(x);
+         if (it == _normalized_grammar.end())
+            continue;
+
+         for (const auto& rhs : it->second)
+         {
+            if (is_unit_rhs(rhs))
+            {
+               char Y = rhs[0];
+               if (!closure.contains(Y))
+               {
+                  closure.insert(Y);
+                  q.push(Y);
+               }
+            }
+         }
+      }
+
+      std::set<string> acc;
+
+      for (char b : closure)
+      {
+         auto it = _normalized_grammar.find(b);
+         if (it == _normalized_grammar.end())
+            continue;
+
+         for (const auto& rhs : it->second)
+         {
+            if (!is_unit_rhs(rhs))
+               acc.insert(rhs);
+         }
+      }
+
+      if (!acc.empty())
+         result[a] = vector<string>(acc.begin(), acc.end());
    }
 
    _normalized_grammar = std::move(result);
